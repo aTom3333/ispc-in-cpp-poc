@@ -18,6 +18,17 @@ namespace iic
             bool condition;
         };
         
+        std::array<bool, LANE_SIZE> internal_and(const std::array<bool, LANE_SIZE>& a, const std::array<bool, LANE_SIZE>& b)
+        {
+            auto helper = [&]<std::size_t... I>(std::index_sequence<I...>)
+            {
+                return std::array<bool, LANE_SIZE> {
+                    (a[I] && b[I])...
+                };
+            };
+            return helper(std::make_index_sequence<LANE_SIZE>{});
+        }
+        
         template<>
         struct if_state<true>
         {
@@ -32,13 +43,7 @@ namespace iic
             
             std::array<bool, LANE_SIZE> compute_mask()
             {
-                auto helper = [&]<std::size_t... I>(std::index_sequence<I...>)
-                {
-                    return std::array<bool, LANE_SIZE> {
-                        (old_mask._values[I] && condition._values[I])...
-                    };
-                };
-                return helper(std::make_index_sequence<LANE_SIZE>{});
+                return internal_and(old_mask._values, condition._values);
             }
             
             void invert()
@@ -80,21 +85,64 @@ namespace iic
             return false;
         }
         
-        struct unmasked_state
+        struct restore_mask
         {
             mask_t old_mask;
-            
-            unmasked_state():
+
+            restore_mask():
                 old_mask(Private{}, _current_mask._values)
-            {
-                _current_mask._values = all_true(std::make_index_sequence<LANE_SIZE>{});
-            }
-            
-            ~unmasked_state()
+            {}
+
+            ~restore_mask()
             {
                 _current_mask._values = old_mask._values;
             }
         };
+        
+        struct unmasked_state : restore_mask
+        {
+            unmasked_state():
+                restore_mask()
+            {
+                _current_mask._values = all_true(std::make_index_sequence<LANE_SIZE>{});
+            }
+        };
+        
+        template<bool is_varying>
+        struct while_state;
+        
+        template<>
+        struct while_state<false>
+        {
+            bool iter(bool condition)
+            {
+                return condition;
+            }
+        };
+        
+        template<>
+        struct while_state<true> : restore_mask
+        {
+            bool iter(const mask_t& condition)
+            {
+                _current_mask._values = internal_and(_current_mask._values, condition._values);
+                return std::any_of(_current_mask._values.begin(), _current_mask._values.end(), [](bool b){ return b; });
+            }
+        };
+        
+        template<typename T>
+        static constexpr bool always_false = false; 
+        
+        template<typename T>
+        auto make_while_state()
+        {
+            if constexpr(std::is_convertible_v<T, mask_t>)
+                return while_state<true>{};
+            else if constexpr(std::is_convertible_v<T, bool>)
+                return while_state<false>{};
+            else
+                static_assert(always_false<T>, "Bad type");
+        }
     }
 
     template<typename T>
@@ -155,11 +203,11 @@ if (0) {             \
     CAT(finished, __LINE__): ; \
 } \
 else \
-    for (auto state = ::iic::detail::make_if_state(cond) ;;) \
+    for (auto CAT(state, __LINE__) = ::iic::detail::make_if_state(cond) ;;) \
         if(1) {      \
             /* before the if */         \
-            if constexpr (!decltype(state)::is_varying) {      \
-                if(::iic::detail::should_goto_else(state)) \
+            if constexpr (!decltype(CAT(state, __LINE__))::is_varying) {      \
+                if(::iic::detail::should_goto_else(CAT(state, __LINE__))) \
                     goto CAT(else_part, __LINE__); \
             }\
             goto CAT(body, __LINE__); \
@@ -172,21 +220,36 @@ else \
                         while (1) \
                             if (1) {  \
                                 /* after if body but before else body */ \
-                                if constexpr(!decltype(state)::is_varying) \
+                                if constexpr(!decltype(CAT(state, __LINE__))::is_varying) \
                                     goto CAT(finished, __LINE__); \
                                 else  \
-                                    state.invert(); \
+                                    CAT(state, __LINE__).invert(); \
                                 goto CAT(else_part, __LINE__); \
                             } else    \
                                 /* if body */ \
                                 CAT(body, __LINE__):
                     /* else body */
 
+#define iic_internal_mask_restore \
+if(0)                \
+    CAT(finished, __LINE__): ; \
+else                 \
+    for(::iic::detail::restore_mask CAT(state, __LINE__) ;;) \
+        if(1)        \
+            goto CAT(body, __LINE__);           \
+        else \
+            while(1) \
+                if(1)\
+                    goto CAT(finished, __LINE__); \
+                else \
+                    CAT(body, __LINE__):
+                    
+                    
 #define iic_unmasked \
 if(0)                \
     CAT(finished, __LINE__): ; \
 else                 \
-    for(::iic::detail::unmasked_state state ;;) \
+    for(::iic::detail::unmasked_state CAT(state, __LINE__) ;;) \
         if(1)        \
             goto CAT(body, __LINE__);           \
         else \
@@ -201,5 +264,21 @@ else                 \
 iic_unmasked \
     for(decl)
             
-            
+    
+#define iic_while(cond) \
+if(0)                   \
+    CAT(finished, __LINE__): ; \
+else                    \
+    for(auto CAT(state, __LINE__) = ::iic::detail::make_while_state<decltype(cond)>();;) \
+        if(1)           \
+            goto CAT(body, __LINE__);                                   \
+        else            \
+            while(1)    \
+                if(1)   \
+                    goto CAT(finished, __LINE__);                       \
+                else \
+                    CAT(body, __LINE__):                                \
+                        while(CAT(state, __LINE__).iter(cond))
+                
+                
 #endif // CONTROL_FLOW_HPP

@@ -12,6 +12,29 @@ varying<float> max(varying<float> a, const varying<float>& b)
     return a;
 }
 
+void thingy(int start, int end)
+{
+    if(start < 1)
+        start = 1;
+    if(end < start)
+        end = start;
+    
+    iic_foreach(auto number : iic::range(start, end))
+    {
+        iic::varying<int> iteration = 0;
+        iic_while(number != 1)
+        {
+            iic_if(number % 2 == 0)
+                number /= 2;
+            else
+                number = number * 3 + 1;
+            ++iteration;
+        }
+        
+        std::cout << iteration << std::endl;
+    }
+}
+
 int main()
 {
     float arr[] = {
@@ -60,6 +83,9 @@ int main()
         varying<float> lane = *(p + i);
         std::cout << lane << std::endl;
     }
+    
+    
+    thingy(0, 30);
     
     
     return 0;

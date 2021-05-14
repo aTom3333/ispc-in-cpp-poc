@@ -117,6 +117,11 @@ namespace iic
             template<typename U, typename V = T, typename = std::enable_if_t<std::is_pointer_v<V>>>
             varying_reference<std::remove_reference_t<decltype(*std::declval<V>())>> operator[](const U& index) const;
 
+            varying_impl& operator++();
+            varying_impl& operator--();
+            varying_impl operator++(int);
+            varying_impl operator--(int);
+            
             // Implementation detail but it is easier for this PoC to have this public
             std::array<T, LANE_SIZE> _values;
 
@@ -348,17 +353,18 @@ namespace iic
         template<typename U> \
         varying_impl<T>& varying_impl<T>::operator OP##=(const U& other) \
         {\
-            auto helper = []<typename T2, typename U2, std::size_t... I>(std::array<T, LANE_SIZE>& self, const U& other, std::index_sequence<I...>) \
+            auto helper = [&]<std::size_t... I>(std::index_sequence<I...>) \
             {\
                 ( \
                     [&]() \
                     {\
                         if(_current_mask._values[I]) \
-                            self[I] OP##= other; \
+                            _values[I] OP##= other; \
                     }(), ...\
                 );\
             };\
-            helper(_values, other, std::make_index_sequence<LANE_SIZE>{});\
+            helper(std::make_index_sequence<LANE_SIZE>{});                             \
+            return *this;                             \
         }
         FOR_ALL_ASSIGNABLE_OP(DEFINE_ASSIGN_OP)
 
@@ -531,6 +537,47 @@ namespace iic
         {
             return *(*this + index);
         }
+
+        #define DEFINE_PRE_INCREMENT(OP) \
+        template<typename T> \
+        requires std::default_initializable<T> \
+                 && std::copyable<T> \
+        varying_impl<T>& varying_impl<T>::operator OP() \
+        {\
+            auto helper = [&]<std::size_t... I>(std::index_sequence<I...>) \
+            {\
+                ( \
+                    [&]() \
+                    {\
+                        if(_current_mask._values[I]) \
+                            OP _values[I]; \
+                    }(), ...\
+                );\
+            };\
+            helper(std::make_index_sequence<LANE_SIZE>{});                 \
+            return *this;\
+        }
+        DEFINE_PRE_INCREMENT(++)
+        DEFINE_PRE_INCREMENT(--)
+        #undef DEFINE_PRE_INCREMENT
+        
+        #define DEFINE_POST_INCREMENT(OP) \
+        template<typename T> \
+        requires std::default_initializable<T> \
+                 && std::copyable<T> \
+        varying_impl<T> varying_impl<T>::operator OP(int) \
+        {\
+            auto helper = [&]<typename T2, typename U2, std::size_t... I>(std::index_sequence<I...>) \
+            {\
+                return std::array<T, LANE_SIZE>{\
+                    (_current_mask._values[I] ? _values[I] OP : T{})...\
+                };\
+            };\
+            return varying_impl<T>(Private{}, helper(std::make_index_sequence<LANE_SIZE>{}));\
+        }
+        DEFINE_POST_INCREMENT(++)
+        DEFINE_POST_INCREMENT(--)
+        #undef DEFINE_POST_INCREMENT
     }
 }
 

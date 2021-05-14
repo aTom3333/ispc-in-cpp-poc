@@ -3,4 +3,4 @@ project(ispc_in_cpp)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(ispc_in_cpp main.cpp include/varying.hpp include/control_flow.hpp)
+add_executable(ispc_in_cpp main.cpp include/varying.hpp include/control_flow.hpp include/reduction.hpp)
