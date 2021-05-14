@@ -95,14 +95,53 @@ namespace iic
                 _current_mask._values = old_mask._values;
             }
         };
-        
-        template<typename T>
-        struct range
-        {
-            T start, finish;
-            
-        };
     }
+
+    template<typename T>
+    struct range
+    {
+        range(T s, T f): start(s), finish(f) {}
+
+        T start, finish;
+
+        struct iterator
+        {
+            T current;
+            T finish;
+
+            bool operator!=(const iterator& other)
+            {
+                return current != other.current;
+            }
+
+            detail::varying_impl<T> operator*()
+            {
+                std::array<bool, detail::LANE_SIZE> new_mask{};
+                std::array<T, detail::LANE_SIZE> new_values{};
+                for(int i = 0; i < detail::LANE_SIZE && current != finish; ++current, ++i)
+                {
+                    new_mask[i] = true;
+                    new_values[i] = current;
+                }
+                _current_mask._values = new_mask;
+                return detail::varying_impl<T>(detail::Private{}, new_values);
+            }
+
+            iterator& operator++() {
+                return *this;
+            }
+        };
+
+        iterator begin()
+        {
+            return iterator{start, finish};
+        }
+
+        iterator end()
+        {
+            return iterator{finish, finish};
+        }
+    };
 }
 
 
@@ -156,6 +195,11 @@ else                 \
                     goto CAT(finished, __LINE__); \
                 else \
                     CAT(body, __LINE__):
+
+
+#define iic_foreach(decl) \
+iic_unmasked \
+    for(decl)
             
             
 #endif // CONTROL_FLOW_HPP

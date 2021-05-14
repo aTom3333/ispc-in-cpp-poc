@@ -130,7 +130,7 @@ namespace iic
             varying_impl<T*> pointer;
             
             // Read from reference
-            operator varying_impl<T>();
+            operator varying_impl<std::remove_cv_t<T>>() const;
             
             // Write to reference
             template<typename U>
@@ -142,7 +142,7 @@ namespace iic
         std::array<bool, LANE_SIZE> all_true(std::index_sequence<I...>)
         {
             return {
-                (I, true)...
+                ((void)I, true)...
             };
         }
     }
@@ -462,15 +462,15 @@ namespace iic
         }
 
         template<typename T>
-        varying_reference<T>::operator varying_impl<T>()
+        varying_reference<T>::operator varying_impl<std::remove_cv_t<T>>() const
         {
             auto helper = [&]<std::size_t... I>(std::index_sequence<I...>)
             {
-                return std::array<T, LANE_SIZE>{
-                    (_current_mask._values[I] ? *pointer._values[I]: T{} )...
+                return std::array<std::remove_cv_t<T>, LANE_SIZE>{
+                    (_current_mask._values[I] ? *pointer._values[I]: std::remove_cv_t<T>{} )...
                 };
             };
-            return varying_impl<T>(Private{}, helper(std::make_index_sequence<LANE_SIZE>{}));
+            return varying_impl<std::remove_cv_t<T>>(Private{}, helper(std::make_index_sequence<LANE_SIZE>{}));
         }
 
         template<typename T>

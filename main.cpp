@@ -17,7 +17,7 @@ int main()
     float arr[] = {
         1, 2, 3, 4, 5, 6, 7, 8
     };
-    float* p = arr;
+    const float* p = arr;
     
     std::cout << "Hello, World!" << std::endl;
     iic::varying<float> a = 4;
@@ -51,8 +51,15 @@ int main()
     offset._values[2] = 2;
     offset._values[3] = 3;
     
-    iic::varying<float*> truc = p + offset;
-    *truc = d;
+    iic::varying<const float*> truc = p + offset;
+    //*truc = d;
+    
+    iic_foreach(auto i : iic::range(0, 7))
+    {
+        std::cout << i << std::endl;
+        varying<float> lane = *(p + i);
+        std::cout << lane << std::endl;
+    }
     
     
     return 0;
