@@ -36,11 +36,11 @@ int main()
     
     auto c = a * 2 - 3;
 
-    iic::_current_mask._values[1] = true;
-    iic::_current_mask._values[2] = true;
-    
-    std::cout << c << std::endl;
-    std::cout << max(a, c) << std::endl;
+    iic_unmasked
+    {
+        std::cout << c << std::endl;
+        std::cout << max(a, c) << std::endl;
+    }
     
     auto d = a;
     

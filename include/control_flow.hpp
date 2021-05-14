@@ -79,6 +79,29 @@ namespace iic
         {
             return false;
         }
+        
+        struct unmasked_state
+        {
+            mask_t old_mask;
+            
+            unmasked_state():
+                old_mask(Private{}, _current_mask._values)
+            {
+                _current_mask._values = all_true(std::make_index_sequence<LANE_SIZE>{});
+            }
+            
+            ~unmasked_state()
+            {
+                _current_mask._values = old_mask._values;
+            }
+        };
+        
+        template<typename T>
+        struct range
+        {
+            T start, finish;
+            
+        };
     }
 }
 
@@ -120,5 +143,19 @@ else \
                                 CAT(body, __LINE__):
                     /* else body */
 
-
+#define iic_unmasked \
+if(0)                \
+    CAT(finished, __LINE__): ; \
+else                 \
+    for(::iic::detail::unmasked_state state ;;) \
+        if(1)        \
+            goto CAT(body, __LINE__);           \
+        else \
+            while(1) \
+                if(1)\
+                    goto CAT(finished, __LINE__); \
+                else \
+                    CAT(body, __LINE__):
+            
+            
 #endif // CONTROL_FLOW_HPP
