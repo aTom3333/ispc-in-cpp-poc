@@ -578,7 +578,22 @@ namespace iic
         DEFINE_POST_INCREMENT(++)
         DEFINE_POST_INCREMENT(--)
         #undef DEFINE_POST_INCREMENT
+        
+        varying_impl<std::size_t> computeProgramIndex()
+        {
+            auto helper = []<std::size_t... I>(std::index_sequence<I...>)
+            {
+                return std::array<std::size_t, LANE_SIZE>{
+                    I...
+                };
+            };
+            
+            return varying_impl<std::size_t>(Private{}, helper(std::make_index_sequence<LANE_SIZE>{}));
+        };
     }
+    
+    const std::size_t programCount = detail::LANE_SIZE;
+    const varying<std::size_t> programIndex = detail::computeProgramIndex();
 }
 
 #endif // VARYING_HPP

@@ -57,6 +57,10 @@ int main()
     
     iic::_current_mask._values[2] = false;
     
+    iic_foreach_active(lane)
+        std::cout << lane << " ";
+    std::cout << std::endl;
+    
     auto c = a * 2 - 3;
 
     iic_unmasked

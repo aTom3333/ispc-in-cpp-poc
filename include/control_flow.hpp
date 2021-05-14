@@ -143,6 +143,63 @@ namespace iic
             else
                 static_assert(always_false<T>, "Bad type");
         }
+        
+        struct foreach_active_state : unmasked_state
+        {
+            struct iterator
+            {
+                struct end_marker {};
+                
+                bool end;
+                size_t lane;
+                foreach_active_state& state;
+                
+                iterator(foreach_active_state& s):
+                    state{s},
+                    end{false},
+                    lane{0}
+                {
+                    while(!state.old_mask._values[lane] && lane < LANE_SIZE)
+                        ++lane;
+                }
+                
+                iterator(foreach_active_state& s, end_marker):
+                    state{s},
+                    end{true},
+                    lane{0}
+                {}
+                
+                size_t operator*() const
+                {
+                    return lane;
+                }
+                
+                bool operator!=(const iterator& other) const
+                {
+                    return !end;
+                }
+                
+                iterator& operator++()
+                {
+                    do {
+                        ++lane;
+                    } while(!state.old_mask._values[lane] && lane < LANE_SIZE);
+                    if(lane >= LANE_SIZE)
+                        end = true;
+                    return *this;
+                }
+            };
+            
+            iterator begin()
+            {
+                return iterator(*this);
+            }
+            
+            iterator end()
+            {
+                return iterator(*this, iterator::end_marker{});
+            }
+        };
     }
 
     template<typename T>
@@ -279,6 +336,13 @@ else                    \
                 else \
                     CAT(body, __LINE__):                                \
                         while(CAT(state, __LINE__).iter(cond))
-                
-                
+                        
+
+#define iic_foreach_active(variable) \
+for(auto variable : ::iic::detail::foreach_active_state{})
+        
+               
+        
+        
+        
 #endif // CONTROL_FLOW_HPP
