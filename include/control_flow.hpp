@@ -319,7 +319,7 @@ else                 \
 
 #define iic_foreach(decl) \
 iic_unmasked \
-    for(decl)
+    for(auto decl)
             
     
 #define iic_while(cond) \

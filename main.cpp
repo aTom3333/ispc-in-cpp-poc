@@ -19,7 +19,7 @@ void thingy(int start, int end)
     if(end < start)
         end = start;
     
-    iic_foreach(auto number : iic::range(start, end))
+    iic_foreach(number : iic::range(start, end))
     {
         iic::varying<int> iteration = 0;
         iic_while(number != 1)
@@ -81,7 +81,7 @@ int main()
     iic::varying<const float*> truc = p + offset;
     //*truc = d;
     
-    iic_foreach(auto i : iic::range(0, 7))
+    iic_foreach(i : iic::range(0, 7))
     {
         std::cout << i << std::endl;
         varying<float> lane = *(p + i);
