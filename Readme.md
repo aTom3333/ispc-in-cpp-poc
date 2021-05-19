@@ -45,8 +45,8 @@ The mask can be modified by some control flow structure, similar to ISPC.
 
 ### `if` statement
 
-First is the `if` statement. Due to working on multiple lanes at once,
-both branches of the same statement can take distinct lanes. The following ISPC code:
+First is the `if` statement. Due to having multiple lanes working at once,
+both branches of the same statement can be taken by distinct lanes. The following ISPC code:
 ```ispc
 if(number % 2 == 0)
     number /= 2;
