@@ -1,5 +1,5 @@
 # Proof of concept/demo SPMD code ala ISPC in C++
-This repo is a demo to showcase how operator overloading and clever <MISSING WORD?> can be used (or rather abused)
+This repo is a demo to showcase how operator overloading and clever macros can be used (or rather abused)
 to let the programmer write code similar to ISPC code that bears the same semantic in standard C++.
 
 Familiarity with ISPC is assumed in the following explanations.
@@ -41,7 +41,7 @@ to varying variables (values are broadcast), but not the other way around.
 Like in ISPC, there is an implicit mask denoting which lanes are active
 that is being passed around without manual handling.
 Almost every operation on varying variables uses this mask to act only on active lanes.
-The mask can be modified <MISSING WORD ?> some control flow structure, similar to ISPC.
+The mask can be modified by some control flow structure, similar to ISPC.
 
 ### `if` statement
 
